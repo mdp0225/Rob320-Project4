@@ -140,6 +140,42 @@ document.body.onload = kineval.start;
 function my_init() {
 
     kineval.startingPlaceholderInit(); // a quick and dirty JavaScript tutorial
+    // kineval.start(); // start KinEval execution once the page and its resources are loader
+    // //create a dance routine
+    // // Initialize dance routine
+    if (robot.name === 'urdf_example') {
+    
+    
+    
+    kineval.params.dance_sequence_index = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                                           1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+                                           2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
+                                           3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,
+                                           4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
+                                           5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5];
+
+    kineval.setpoints = [
+        // Define your dance poses here as key-value pairs of joint angles
+        // Each pose should be an object with joint names as keys and target angles as values
+        { "joint1": 0.75, "joint2": 1.65, "joint3": 0 }, // Example pose 1
+        { "joint1": -0.75, "joint2": -1.65, "joint3": 0 },   // Example pose 2
+        { "joint1": 0, "joint2": 0, "joint3": 0 },
+        { "joint1": 0.75, "joint2": 0, "joint3": 1.5 },
+        { "joint1": -0.75, "joint2": 0, "joint3": -1.5 },
+        { "joint1": 0, "joint2": -3.15, "joint3": 3.15 }
+        // Add more poses as needed
+    ];
+    }
+    
+    // Initialize dance sequence index
+    // kineval.params.dance_sequence_index = [];
+    // for (var i = 0; i < kineval.setpoints.length; i++) {
+    //     kineval.params.dance_sequence_index.push(i);
+    // }
+    
+    // // Call the function to execute setpoints for the dance routine
+    // kineval.params.update_pd_dance = true;
+    // kineval.params.persist_pd = true;
 
 }
 
