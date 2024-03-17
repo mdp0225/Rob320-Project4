@@ -1,4 +1,3 @@
-
 /*-- |\/| |\/| |\/| |\/| |\/| |\/| |\/| |\/| |\/| |\/| |\/| |\/| |\/| |\/| |\/|
 
     KinEval | Kinematic Evaluator | arm servo control
@@ -22,6 +21,12 @@ kineval.setpointDanceSequence = function execute_setpoints() {
     if (!kineval.params.update_pd_dance) return; 
 
     // STENCIL: implement FSM to cycle through dance pose setpoints
+    kineval.params.dance_pose_index = kineval.params.dance_sequence_index.shift();
+    for (x in robot.joints) {
+        kineval.params.setpoint_target[x] = kineval.setpoints[kineval.params.dance_pose_index][x];
+    }
+    kineval.params.dance_sequence_index.push(kineval.params.dance_pose_index);
+
 }
 
 kineval.setpointClockMovement = function execute_clock() {
@@ -43,7 +48,18 @@ kineval.robotArmControllerSetpoint = function robot_pd_control () {
 
     kineval.params.update_pd = false; // if update requested, clear request and process setpoint control
 
-    // STENCIL: implement P servo controller over joints
+    //STENCIL: implement P servo controller over joints
+    for (x in robot.joints) {
+        //get curent angle and desired angle
+        var curr_angle = robot.joints[x].angle;
+        var desired_angle = kineval.params.setpoint_target[x];
+
+        //calculate the control
+        var diff = kineval.params.setpoint_target[x] - robot.joints[x].angle;
+        var control = robot.joints[x].servo.p_gain*diff;
+        robot.joints[x].control += control;
+    }
 }
+
 
 
