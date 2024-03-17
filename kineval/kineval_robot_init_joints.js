@@ -35,18 +35,21 @@ kineval.initRobotJoints = function initRobotJoints() {
     //   robot description only specifies parent and child links for joints.
     //   additionally specify parent and child joints for each link
 
-
-
-
-
-
-
+        // set parent and child links for each joint
+        var parentLink = robot.joints[x].parent;
+        var childLink = robot.joints[x].child;
+        // initialize the children
+        if (robot.links[parentLink].children == undefined){
+            robot.links[parentLink].children = [];
+        }
+        robot.links[childLink].parent = x;
+        // add the child to the parent's children
+        robot.links[parentLink].children.push(x);
 
 /* STENCIL END */ 
 
     }
 
 }
-
 
 
