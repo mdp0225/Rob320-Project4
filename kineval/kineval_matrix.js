@@ -65,10 +65,31 @@ function matrix_transpose(m) {
     return result;
 }
 
-// function matrix_pseudoinverse(m) {
-//     // returns pseudoinverse of matrix m
-
-// }
+function matrix_pseudoinverse(m) {
+    // returns pseudoinverse of matrix m
+    //create transpoe of m
+    var mt = matrix_transpose(m);
+    //create pseudoinverse matrix
+    var pim = [];
+    //if rows > columns
+    if (m.length > m[0].length) {
+        var mmt = matrix_multiply(mt, m);
+        var inv = numeric.inv(mmt);
+        pim = matrix_multiply(inv, mt);
+    }
+    //if rows < columns
+    else if (m.length < m[0].length) {
+        var mmt = matrix_multiply(m, mt);
+        var inv = numeric.inv(mmt);
+        pim = matrix_multiply(mt, inv);
+    } 
+    //if rows = columns
+    else {
+        var inv = numeric.inv(m);
+        pim = inv;
+    }
+    return pim;
+}
 
 // function matrix_invert_affine(m) {
 //     // returns 2D array that is the invert affine of 4-by-4 matrix m
