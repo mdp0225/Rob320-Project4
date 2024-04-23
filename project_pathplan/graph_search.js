@@ -48,6 +48,13 @@ function initSearchGraph() {
             //   point for the search
         }
     }
+    G[ (q_init[0]+2)/eps ][ (q_init[1]+2)/eps ].distance = 0;
+    G[ (q_init[0]+2)/eps ][ (q_init[1]+2)/eps ].parent = null;
+    G[ (q_init[0]+2)/eps ][ (q_init[1]+2)/eps ].visited = true;
+    G[ (q_init[0]+2)/eps ][ (q_init[1]+2)/eps ].priority = 0;
+    G[ (q_init[0]+2)/eps ][ (q_init[1]+2)/eps ].queued = true;
+    start_node =  G[ (q_init[0]+2)/eps ][ (q_init[1]+2)/eps ];
+    visit_queue.push(start_node);
 }
 
 function iterateGraphSearch() {
