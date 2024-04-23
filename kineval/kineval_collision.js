@@ -55,11 +55,16 @@ kineval.poseIsCollision = function robot_collision_test(q) {
 
     // traverse robot kinematics to test each body for collision
     // STENCIL: implement forward kinematics for collision detection
-    //return robot_collision_forward_kinematics(q);
+    //console.log("collision name: " + robot_collision_forward_kinematics(q));
+    return robot_collision_forward_kinematics(q);
+
 
 }
 
-
+function robot_collision_forward_kinematics(q) {
+    // Start traversal from the base link
+    return traverse_collision_forward_kinematics_link(robot.links[robot.base], generate_identity(4), q);  
+}
 
 function traverse_collision_forward_kinematics_link(link,mstack,q) {
 
@@ -131,5 +136,45 @@ function traverse_collision_forward_kinematics_link(link,mstack,q) {
     return false;
 }
 
+function traverse_collision_forward_kinematics_joint(joint, mstack, q) {
+    // Get joint transformation matrix based on joint type and angle
+    var joint_matrix;
+    if (robot.links_geom_imported) {
+        if (joint.type === "prismatic") {
+            // Implement translation for prismatic joint
+            // joint_matrix = generate_translation_matrix(q[q_names[joint.name]], q[q_names[joint.name] + 1], q[q_names[joint.name] + 2]);
+            var angles = [ joint.angle,joint.angle, joint.angle];
+            var v = joint.axis;
+            var l = angles.length;
+            var p = new Array(l);
+            for (var i=0;i<l;++i){
+                p[i] = angles[i]*v[i];
+            }
+            angles = p;
+            joint_matrix = generate_translation_matrix(angles[0],angles[1],angles[2]);
+        } 
+        else if (joint.type === "continuous" || joint.type === "revolute") {
+            // Implement rotation for continuous or revolute joint
+            //joint_matrix = quaternion_to_rotation_matrix(quaternion_normalize(quaternion_from_axisangle(joint.axis, q[q_names[joint.name]])));
+            joint_matrix = quaternion_to_rotation_matrix(quaternion_normalize(quaternion_from_axisangle(joint.axis, joint.angle)));
+        } 
+        else {
+            joint_matrix = generate_identity(4);
+        }
+    } 
+    else {
+        //joint_matrix = quaternion_to_rotation_matrix(quaternion_normalize(quaternion_from_axisangle(joint.axis, q[q_names[joint.name]])));
+        joint_matrix = quaternion_to_rotation_matrix(quaternion_normalize(quaternion_from_axisangle(joint.axis, joint.angle)));
+    }
+
+    // Calculate joint transformation matrix
+    var transformation = matrix_multiply(robot.links[joint.parent].xform, joint_matrix);
+
+    // Update matrix stack
+    var new_mstack = matrix_multiply(transformation, mstack);
+
+    // Recurse through the link connected to this joint
+    return traverse_collision_forward_kinematics_link(robot.links[joint.child], new_mstack, q);
+}
 
 
