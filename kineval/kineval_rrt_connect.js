@@ -71,6 +71,8 @@ kineval.planMotionRRTConnect = function motionPlanningRRTConnect() {
             kineval.params.update_motion_plan_traversal = false;
 
         // set robot pose from entry in planned robot path
+        console.log("index: " + kineval.motion_plan_traversal_index)
+        console.log("here: " + kineval.motion_plan);
         robot.origin.xyz = [
             kineval.motion_plan[kineval.motion_plan_traversal_index].vertex[0],
             kineval.motion_plan[kineval.motion_plan_traversal_index].vertex[1],
@@ -127,8 +129,6 @@ kineval.robotRRTPlannerInit = function robot_rrt_planner_init() {
     cur_time = Date.now();
 }
 
-
-
 function robot_rrt_planner_iterate() {
 
     var i;
@@ -137,22 +137,60 @@ function robot_rrt_planner_iterate() {
     if (rrt_iterate && (Date.now()-cur_time > 10)) {
         cur_time = Date.now();
 
-    // STENCIL: implement single rrt iteration here. an asynch timing mechanism 
-    //   is used instead of a for loop to avoid blocking and non-responsiveness 
-    //   in the browser.
-    //
-    //   once plan is found, highlight vertices of found path by:
-    //     tree.vertices[i].vertex[j].geom.material.color = {r:1,g:0,b:0};
-    //
-    //   provided support functions:
-    //
-    //   kineval.poseIsCollision - returns if a configuration is in collision
-    //   tree_init - creates a tree of configurations
-    //   tree_add_vertex - adds and displays new configuration vertex for a tree
-    //   tree_add_edge - adds and displays new tree edge between configurations
-    }
+        // Initialize RRT trees if this is the first iteration
+        if (rrt_iter_count === 0) {
+            T_a = tree_init(q_start_config);
+            T_b = tree_init(q_goal_config);
+            rrt_iter_count++;
+            return "searching";
+        }
 
+        // Implement single RRT iteration here
+        if (rrt_alg === 1) { // RRT-Connect
+
+            // Extend the trees towards random configurations
+            var q_rand = random_config();
+
+            // Extend tree T_a towards q_rand
+            var extended_a = extendRRT(T_a, q_rand);
+            console.log(extended_a);
+            if (extended_a !== "trapped") {
+                // Try connecting T_b to the new vertex in T_a
+                var connected = connectRRT(T_b, T_a.vertices[T_a.newest].vertex);
+                if (connected === "reached") {
+                    // Path found
+                    var path = createPath(T_a, T_b);
+                    // Highlight vertices of found path
+                    for (i = 0; i < path.length; i++) {
+                        var pathTree = i < path.length / 2 ? T_a : T_b;
+                        var pathIndex = i < path.length / 2 ? i : i - path.length / 2;
+                        pathTree.vertices[pathIndex].geom.material.color = { r: 1, g: 0, b: 0 };
+                        //path[i].geom.material.color = { r: 1, g: 0, b: 0 };
+                    }
+                    rrt_iterate = false;
+                    return "reached";
+                }
+            }
+
+            // Swap trees T_a and T_b
+            var temp = T_a;
+            T_a = T_b;
+            T_b = temp;
+
+            rrt_iter_count++;
+
+            // Check if maximum iterations reached
+            if (rrt_iter_count >= 1000) {
+                rrt_iterate = false;
+                return "failed";
+            }
+
+            return "searching";
+        }
+    }
+    return "searching";
 }
+
 
 //////////////////////////////////////////////////
 /////     STENCIL SUPPORT FUNCTIONS
@@ -237,12 +275,99 @@ function tree_add_edge(tree,q1_idx,q2_idx) {
     //   find_path
     //   path_dfs
 
+    // Generate a random configuration within the bounds of the planning space
+function random_config() {
+    return [
+        Math.random() * (robot_boundary[1][1] - robot_boundary[0][0]) + robot_boundary[0][0],
+        Math.random() * (robot_boundary[1][1] - robot_boundary[0][0]) + robot_boundary[0][0],
+        Math.random() * (robot_boundary[1][1] - robot_boundary[0][0]) + robot_boundary[0][0]
+    ];
+}
 
+// Generate a new configuration by extending the tree towards a random configuration
+function newConfig(q_from, q_to) {
+    var eps = 0.5;
+    var dx = q_to[0] - q_from[0];
+    var dy = q_to[1] - q_from[1];
+    var dz = q_to[2] - q_from[2];
+    var dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
+    if (dist <= eps) {
+        return q_to;
+    } else {
+        return [
+            q_from[0] + eps * dx / dist,
+            q_from[1] + eps * dy / dist,
+            q_from[2] + eps * dz / dist
+        ];
+    }
+}
 
+// Find the nearest neighbor in the RRT tree to a given configuration
+function findNearestNeighbor(tree, q) {
+    var minDist = Number.MAX_VALUE;
+    var nearestIdx = -1;
 
+    for (var i = 0; i < tree.vertices.length; i++) {
+        var dist = distance(tree.vertices[i].vertex, q);
+        if (dist < minDist) {
+            minDist = dist;
+            nearestIdx = i;
+        }
+    }
+    return nearestIdx;
+}
 
+// Extend the RRT tree towards a random configuration
+function extendRRT(tree, target) {
+    var eps = 0.5;
+    var q_near_idx = findNearestNeighbor(tree, target);
+    var q_near = tree.vertices[q_near_idx].vertex;
+    var q_new = newConfig(q_near, target);
 
+    var collision_result = kineval.poseIsCollision(q_new);
+    console.log("iteration: " + rrt_iter_count + "collision: " + collision_result);
+    if (!collision_result) {
+        tree_add_vertex(tree, q_new);
+        tree_add_edge(tree, q_near_idx, tree.newest);
 
+        if (distance(q_new, target) <= eps) {
+            return "reached";
+        }
+        return "advanced";
+    }
+    return "trapped";
+}
 
+// Connect the two RRT trees
+function connectRRT(tree, q_target) {
+    var extended = extendRRT(tree, q_target);
+    while (extended === "advanced") {
+        extended = extendRRT(tree, q_target);
+    }
+    return extended;
+}
+
+function distance(q1, q2) {
+    var dx = q2[0] - q1[0];
+    var dy = q2[1] - q1[1];
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+// Create a path from the start configuration to the goal configuration
+function createPath(tree1, tree2) {
+    var path = [];
+    var current_vertex = tree1.vertices[tree1.newest];
+    while (current_vertex !== undefined) {
+        path.unshift(current_vertex.vertex);
+        current_vertex = current_vertex.parent;
+    }
+    current_vertex = tree2.vertices[tree2.newest];
+    while (current_vertex !== undefined) {
+        path.unshift(current_vertex.vertex);
+        current_vertex = current_vertex.parent;
+    }
+    kineval.motion_plan = path;
+    return path;
+}
 
